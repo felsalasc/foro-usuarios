@@ -1,0 +1,44 @@
+# Compilación y herramientas
+target/
+.m2/
+.tools/
+*.log
+.idea/
+.vscode/
+*.iml
+.classpath
+.project
+.settings/
+bin/
+.DS_Store
+Thumbs.db
+
+# Variables, credenciales y certificados (en cualquier subcarpeta)
+.env
+.env.*
+*.env
+secrets/
+credentials/
+*wallet*/
+*Wallet*/
+*WALLET*/
+*wallet*.zip
+*Wallet*.zip
+*WALLET*.zip
+*.sso
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.pem
+*.key
+*.crt
+*.cer
+tnsnames.ora
+sqlnet.ora
+ojdbc.properties
+application-secrets.*
+
+# Base local en disco si se habilita posteriormente
+*.mv.db
+*.trace.db
