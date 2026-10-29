@@ -10,6 +10,6 @@ public class PasswordUtf8Validator implements ConstraintValidator<PasswordUtf8, 
     public boolean isValid(String value, ConstraintValidatorContext context) {
         if (value == null) return true; // @NotBlank informa el valor ausente.
         int bytes = value.getBytes(StandardCharsets.UTF_8).length;
-        return bytes >= 8 && bytes <= 72;
+        return !value.isBlank() && bytes >= 8 && bytes <= 72;
     }
 }

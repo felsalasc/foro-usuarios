@@ -1,6 +1,6 @@
 # Verificación de la base de Foro Usuarios
 
-Fecha: 29 de octubre de 2026. Alcance: Tasks 1 a 3 del plan. Se conserva la evidencia histórica de cada bloque y se agrega la verificación de autenticación.
+Fecha: 29 de octubre de 2026. Alcance: Tasks 1 a 4 del plan. Se conserva la evidencia histórica de cada bloque y se agrega la gestión de cuentas y roles. Las verificaciones locales usan H2; Oracle sigue pendiente.
 
 ## Resultados
 
@@ -44,7 +44,7 @@ Los logs locales .verificacion/red.log, .verificacion/green.log, .verificacion/v
 
 ## Límites del bloque
 
-El resultado anterior corresponde al bloque inicial de arranque. Las verificaciones siguientes lo amplían. Gestión de cuentas y roles, colección Postman y pruebas Oracle reales continúan pendientes.
+El resultado anterior corresponde al bloque inicial de arranque. Las verificaciones siguientes lo amplían. Colección Postman, datos de demostración y pruebas Oracle reales continúan pendientes.
 
 ## Verificación de registro
 
@@ -96,3 +96,33 @@ La comprobación HTTP usó una clave aleatoria de 32 bytes generada en memoria p
 La autoconfiguración de usuarios en memoria de Spring Boot está excluida; la autenticación consulta USUARIOS. Los tokens no se registran en logs. La clave de fixture bajo src/test/resources es pública, exclusiva de tests y no se empaqueta en el JAR.
 
 Evidencia local: .verificacion/auth-red.log, .verificacion/auth-audience-red.log, .verificacion/auth-verify.log y .verificacion/auth-http.log. El script de diagnóstico y los logs permanecen excluidos de Git dentro de .verificacion/. La entrega no incorpora esas claves ni procesos locales.
+
+## Verificación de cuentas y roles
+
+| Comprobación | Resultado observado |
+|---|---|
+| Suite completa | 85 pruebas, 0 fallos, 0 errores, 0 omitidas |
+| Compilación | clean verify: BUILD SUCCESS, JAR generado, código 0 |
+| Acceso a cuentas | Propietario y administrador autorizados; otro usuario recibe 403 |
+| Listado | Solo administrador, cuentas activas y respuestas de cuatro campos |
+| Edición | Nombre y correo normalizados; contraseña omitida o null conserva el hash |
+| Cambio de contraseña | Credencial anterior rechazada, nueva aceptada; JWT previo conserva vigencia acordada |
+| Cambio de rol | Solo administrador; rol vigente se refleja con tokens ya emitidos |
+| Baja lógica | 204, fila ACTIVO=0 conservada; login/token rechazados, consulta 404 |
+| Último administrador | Baja y despromoción rechazadas con 409 |
+| Concurrencia H2 | Dos bajas, dos despromociones, operación mixta y edición frente a cambio de rol comprobadas |
+| Inicialización | Deshabilitada por defecto; habilitación explícita; repetición sin duplicar ni cambiar password |
+| Credenciales iniciales | Entradas inválidas impiden inicialización; no se promueve una cuenta existente |
+| HTTP real | Inicializador, CRUD, permisos, roles y desactivación comprobados sobre el JAR |
+| Revisión independiente | Sin defectos bloqueantes identificados |
+| Oracle | Conexión, CRUD y concurrencia real pendientes |
+
+Distribución: AplicacionTest 1, RegistroApiTest 21, AuthApiTest 18, JwtServiceTest 14, UsuariosApiTest 21, AdministradorConcurrenteTest 4, AdministradorInitializerTest 5 y BootstrapDeshabilitadoTest 1.
+
+La prueba concurrente de dos bajas conserva exactamente un administrador activo; otra hace lo mismo con dos despromociones, y una tercera combina baja y despromoción. La prueba de edición simultánea con cambio de rol verifica que ambos cambios persistan sin restaurar el rol anterior. Todas se ejecutaron contra H2, con transacciones independientes, sin simular el repositorio.
+
+La prueba HTTP inicia el JAR con administrador de prueba creado por el inicializador y credenciales aleatorias recibidas por entorno. Registra dos cuentas normales, comprueba listado administrativo y acceso propio, rechazo de acceso ajeno, edición, correo duplicado, cambio de rol con un token previo, pérdida inmediata de privilegio administrativo y protección del último administrador. Después desactiva una cuenta y comprueba 401 para su token y 404 para su consulta. El servidor se cierra al terminar.
+
+La revisión señaló límites de cobertura, sin bugs demostrados. Se añadieron los casos de contraseña null, despromoción concurrente, operación mixta y credenciales inválidas de inicialización. Los arranques administrativos simultáneos siguen fuera de la garantía: con el mismo correo uno puede fallar por unicidad. Se documenta usar una instancia para la inicialización. La validación de los bloqueos en Oracle sigue pendiente y no se infiere de H2.
+
+Evidencia local: .verificacion/usuarios-red.log, .verificacion/usuarios-verify.log y .verificacion/usuarios-http.log; informes JUnit en target/surefire-reports/. No se generaron remotos ni se publicó código.

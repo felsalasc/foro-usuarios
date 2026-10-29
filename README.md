@@ -4,7 +4,7 @@ Microservicio de usuarios para el sistema de foros de DSY2205, Semana 2. Proyect
 
 ## Estado actual
 
-Registro, inicio de sesión e identidad autenticada implementados. POST `/api/auth/registro` crea una cuenta activa con rol USUARIO y contraseña BCrypt; POST `/api/auth/login` emite un JWT; GET `/api/auth/me` devuelve la identidad y el rol vigentes. La gestión de cuentas y los permisos administrativos se implementarán en el siguiente bloque. Las rutas protegidas sin token devuelven 401, incluida `/`.
+Registro, inicio de sesión, identidad autenticada, gestión de cuentas y roles implementados. Cada usuario gestiona su cuenta; un administrador también puede listar y gestionar otras cuentas y cambiar roles. La eliminación desactiva la cuenta y bloquea su autenticación. Las rutas protegidas sin token devuelven 401, incluida `/`. La conexión Oracle y las evidencias Postman siguen pendientes.
 
 Esta aplicación tiene su propio repositorio Git y se compila por separado. La futura integración con `foro-contenido` será exclusivamente HTTP. No se requieren código fuente, JAR, tablas ni archivos de configuración de otro proyecto para compilar o iniciar esta base.
 
@@ -84,7 +84,7 @@ POST `http://localhost:8081/api/auth/registro`, con Content-Type `application/js
 }
 ```
 
-Contraseña ilustrativa para pruebas locales. Respuesta: 201, cabecera Location `/api/usuarios/{id}` y JSON con id, nombre, correo y rol. El ID es generado por la base y el rol es siempre USUARIO al registrarse. La consulta GET del recurso indicado en Location se implementará en el bloque de gestión de cuentas; por ahora se puede consultar la identidad de la cuenta mediante `/api/auth/me`.
+Contraseña ilustrativa para pruebas locales. Respuesta: 201, cabecera Location `/api/usuarios/{id}` y JSON con id, nombre, correo y rol. El ID es generado por la base y el rol es siempre USUARIO al registrarse. La cuenta se consulta mediante GET `/api/usuarios/{id}` con su token o el de un administrador; `/api/auth/me` consulta la identidad del token presentado.
 
 Reglas de entrada:
 
@@ -123,6 +123,46 @@ El JWT utiliza HS256, issuer `foro-usuarios`, audiencia `foro-api`, sujeto igual
 
 Cada petición autenticada consulta la cuenta en la base. Una cuenta inactiva o eliminada deja de autorizar con sus tokens anteriores; un cambio de rol se refleja en la siguiente petición. `/api/auth/me` devuelve solo id, nombre, correo y rol. No hay refresh token. Un cambio de contraseña no revocará por sí solo los JWT ya emitidos antes de su vencimiento; cambiar la clave de firma invalida todos los tokens.
 
+## Gestión de cuentas y roles
+
+Todas estas rutas requieren token. Las respuestas de cuenta incluyen solo id, nombre, correo y rol.
+
+| Operación | Permiso | Resultado |
+|---|---|---|
+| GET /api/usuarios | Administrador | 200, lista de cuentas activas ordenada por ID |
+| GET /api/usuarios/{id} | Propietario o administrador | 200, cuenta activa |
+| PUT /api/usuarios/{id} | Propietario o administrador | 200, cuenta actualizada |
+| DELETE /api/usuarios/{id} | Propietario o administrador | 204 sin cuerpo, cuenta desactivada |
+| PUT /api/usuarios/{id}/rol | Administrador | 200, rol actualizado |
+
+PUT de cuenta requiere nombre y correo; password es opcional. Omitirlo o enviar `null` conserva el hash actual. Si se proporciona una nueva contraseña, debe cumplir los límites del registro y no contener solo espacios. No se aceptan rol, activo o id en esta operación. Los correos se normalizan y su unicidad se conserva también al editar.
+
+Ejemplo de cambio de rol: `{"rol":"ADMINISTRADOR"}` o `{"rol":"USUARIO"}`. Los valores numéricos, desconocidos o nulos producen 400. Una petición sin permiso devuelve 403; una cuenta inexistente o inactiva, 404; un correo duplicado o intento de quitar el último administrador activo, 409.
+
+No se permite desactivar al último administrador activo ni cambiarlo a USUARIO. Las operaciones que pueden quitar ese privilegio bloquean primero las filas de administradores activos en orden de ID y hacen el recuento después; la actualización del destino también usa bloqueo y lectura actualizada. Esta regla se prueba con solicitudes concurrentes en H2 y debe comprobarse adicionalmente en Oracle.
+
+DELETE conserva la fila con ACTIVO=0 para preservar la autoría histórica del foro. La cuenta deja de aparecer en el listado ordinario, no se consulta por ID y sus tokens reciben 401. Su correo permanece reservado: no se permite registrar otra cuenta con el mismo correo.
+
+## Crear el primer administrador
+
+El registro público siempre crea USUARIO. Para crear el primer administrador, habilitar explícitamente el inicializador en el servidor, con JWT_SECRET_BASE64 ya definida:
+
+```powershell
+$env:BOOTSTRAP_ADMIN_ENABLED = 'true'
+$env:BOOTSTRAP_ADMIN_NOMBRE = 'Administrador'
+$env:BOOTSTRAP_ADMIN_CORREO = 'admin@example.test'
+$taskAdminCredential = Get-Credential -UserName $env:BOOTSTRAP_ADMIN_CORREO -Message 'Contraseña del primer administrador'
+$env:BOOTSTRAP_ADMIN_PASSWORD = $taskAdminCredential.GetNetworkCredential().Password
+.\mvnw.cmd spring-boot:run '-Dspring-boot.run.profiles=local'
+# Después de detener el servidor:
+Remove-Item Env:BOOTSTRAP_ADMIN_PASSWORD
+Remove-Item Env:BOOTSTRAP_ADMIN_ENABLED
+```
+
+Para Oracle usar su perfil y las variables de conexión correspondientes. El inicializador está deshabilitado por defecto y requiere nombre, correo y contraseña válidos al habilitarlo. Si ya existe un administrador activo, no crea otro ni modifica contraseñas; si no hay administradores y el correo pertenece a una cuenta existente, se detiene sin promoverla. Las credenciales no se imprimen.
+
+Ejecutar la inicialización con una instancia a la vez: los arranques simultáneos con el mismo correo pueden competir por la restricción de unicidad y uno fallar. En Oracle basta inicializar una vez porque los datos persisten. En H2 se pierde la base al detenerla, de modo que hay que inicializar de nuevo en cada arranque donde se necesite un administrador.
+
 ## Pruebas
 
 ```powershell
@@ -133,6 +173,8 @@ Cada petición autenticada consulta la cuenta en la base. Una cuenta inactiva o 
 `AplicacionTest` comprueba una conexión real a H2 con JDBC. `RegistroApiTest` cubre registro, hash y salt BCrypt, normalización, concurrencia, unicidad, campos reservados, límites UTF-8, validación y tipos JSON. `AuthApiTest` prueba el flujo completo de login e identidad y los rechazos de autenticación. `JwtServiceTest` comprueba firma, claims, clave y vencimiento con reloj fijo, sin esperas.
 
 Las pruebas de contexto fuerzan los perfiles `local` y `test`, usan servicios y repositorios reales y no requieren Oracle ni una clave de producción. El perfil `test` solo aporta la clave pública de fixture desde los recursos de pruebas; no usarla en ejecución real. Los resultados están en `target/surefire-reports/`. `verify` genera el JAR ejecutable propio en `target/`.
+
+`UsuariosApiTest` cubre permisos, consulta, edición, cambio de contraseña/rol, baja lógica y protección del último administrador. `AdministradorConcurrenteTest` prueba desactivaciones y cambios de rol simultáneos, y que una edición de perfil no restaure un rol anterior. Las pruebas del inicializador verifican habilitación explícita, idempotencia y credenciales inválidas. El perfil test también deshabilita el inicializador por defecto; sus pruebas de habilitación usan una base H2 aislada.
 
 ## Git y documentación
 

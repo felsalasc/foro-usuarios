@@ -71,10 +71,12 @@
 
 **Interfaces:** listar(): List<UsuarioResponse> solo ADMINISTRADOR; obtener/actualizar/desactivar con Long id y principal autenticado; cambiarRol(Long id, Rol rol, principal). PUT de cuenta recibe nombre, correo y password opcional; password omitido conserva el hash; no acepta rol ni activo. DELETE es desactivación persistente. Cuenta inactiva es 404 para consulta por id.
 
-- [ ] Escribir usuarioNoPuedeGestionarOtraCuenta (403), administradorPuedeListar (200), usuarioPuedeEditarSuCuenta (200) y usuarioPuedeDesactivarSuCuenta (204 seguido de 401 con token anterior); ejecutar antes de añadir endpoints.
-- [ ] Implementar permisos del spec. Añadir pruebas rolSoloLoCambiaAdministrador (403), conservaUltimoAdministrador (409), conservaAdministradorConcurrente (nunca cero administradores), cuentaInexistente (404), correoDuplicadoAlEditar (409) y JSON inválido (400). Serializar operaciones que puedan quitar administradores con bloqueo transaccional consistente sobre administradores activos; verificar concurrencia también en Oracle.
-- [ ] Implementar inicializador deshabilitado por defecto, habilitable explícitamente por entorno para crear administrador si no existe. Requiere nombre, correo y contraseña desde entorno; no los imprime y no ejecuta en arranque normal. Prueba: no crea sin habilitarse; al repetirse no duplica cuentas.
-- [ ] Ejecutar .\mvnw.cmd test y registrar resultado; commit local.
+- [x] Escribir usuarioNoPuedeGestionarOtraCuenta (403), administradorPuedeListar (200), usuarioPuedeEditarSuCuenta (200) y usuarioPuedeDesactivarSuCuenta (204 seguido de 401 con token anterior); ejecutar antes de añadir endpoints.
+- [x] Implementar permisos del spec. Añadir pruebas rolSoloLoCambiaAdministrador (403), conservaUltimoAdministrador (409), conservaAdministradorConcurrente (nunca cero administradores), cuentaInexistente (404), correoDuplicadoAlEditar (409) y JSON inválido (400). Serializar operaciones que puedan quitar administradores con bloqueo transaccional consistente sobre administradores activos; verificación de concurrencia H2 realizada. La comprobación en Oracle queda pendiente en el siguiente punto.
+- [x] Implementar inicializador deshabilitado por defecto, habilitable explícitamente por entorno para crear administrador si no existe. Requiere nombre, correo y contraseña desde entorno; no los imprime y no ejecuta en arranque normal. Prueba: no crea sin habilitarse; al repetirse no duplica cuentas.
+- [x] Ejecutar .\mvnw.cmd test y registrar resultado; commit local.
+
+- [ ] Verificar concurrencia y bloqueos en Oracle real junto con Task 5. Pendiente; los resultados H2 no acreditan esta comprobación.
 
 ## Task 5: Oracle, Postman y evidencia del servicio
 

@@ -64,4 +64,21 @@ Pre-flight: el login consume USUARIOS, su correo normalizado y el PasswordEncode
 
 Task 3: complete. Evidencia: 54/54 pruebas, JAR generado y flujo HTTP real comprobado con H2. Documentación actualizada para exigir JWT_SECRET_BASE64 en ejecución. Commit local del bloque sin publicación.
 
-Las tareas 4 y 5 del plan continúan pendientes. Próximo bloque: gestión de cuentas, roles y protección del último administrador.
+## Registro de Task 4
+
+Plan: docs/plan-implementacion.md, Task 4: Gestión de cuentas y privilegios.
+
+Pre-flight: se consume el principal UsuarioResponse generado por el filtro y la tabla USUARIOS de Task 2. Los roles de cada petición se obtienen de la base mediante Task 3. No cambia el contrato de identidad ni el esquema SQL. Sigue siendo un repositorio Git independiente, sin proyecto Maven padre ni remoto configurado.
+
+- Pruebas de permisos escritas antes de crear UsuarioController. Fallo inicial: 403 esperado al consultar otra cuenta, 404 recibido porque la ruta no existía. Log: .verificacion/usuarios-red.log.
+- Se implementaron listado administrativo, consulta propia o administrativa, actualización, baja lógica y cambio administrativo de rol. Se conservan DTO de salida reducidos. Password omitido o null mantiene el hash; si se envía debe ser válido y no blanco. Los roles numéricos se rechazan al deserializar.
+- Las operaciones que pueden quitar un administrador bloquean primero administradores activos en orden de ID, después el destino y realizan un recuento SQL actual. La edición de perfil bloquea y refresca el destino antes de modificarlo, para no restaurar roles desactualizados. Las operaciones administrativas sobre otras cuentas vuelven a comprobar el privilegio vigente tras esperar.
+- Se añadió inicializador deshabilitado por defecto con credenciales desde entorno y validadas con las reglas del registro. No cambia cuentas existentes ni contraseñas al repetirse. La inicialización concurrente de múltiples instancias no está garantizada; puede producir un conflicto de unicidad, sin duplicar cuentas. README indica ejecutarla con una instancia a la vez.
+- Revisión independiente de solo lectura: sin bugs bloqueantes identificados. Se amplió la cobertura de password null, despromociones simultáneas, operaciones mixtas y credenciales de inicialización inválidas. La revalidación del actor durante una espera está implementada; no se agregó una prueba con instrumentación especial para controlar ese instante.
+- Suite final: clean verify, BUILD SUCCESS, código 0; 85 pruebas, cero fallos/errores/omitidas. Nuevas pruebas: UsuariosApiTest 21, AdministradorConcurrenteTest 4, AdministradorInitializerTest 5 y BootstrapDeshabilitadoTest 1. Se conservan las 54 anteriores. Log: .verificacion/usuarios-verify.log.
+- HTTP real del JAR en H2: administrador inicial, usuarios normales, listado y edición, permisos 403, cambios de rol con tokens anteriores, conflicto 409 del último administrador, desactivación 204, token posterior 401 y cuenta inactiva 404. Claves y passwords de prueba aleatorios en memoria, sin impresión ni persistencia; proceso cerrado. Log: .verificacion/usuarios-http.log.
+- Ruling: la comprobación de concurrencia en Oracle se mantiene pendiente para Task 5, junto con la conexión y evidencia Oracle. El bloque actual solo acredita código y pruebas H2; no se marca ese requisito como ejecutado.
+
+Task 4: implementación y verificación local completas; concurrencia en Oracle pendiente. Cambios guardados en el commit local del bloque, sin publicación.
+
+Task 5 sigue pendiente: Oracle real, colección Postman, datos de demostración y matriz. La base independiente de foro-contenido puede prepararse a continuación sin depender de esa comprobación; cada repositorio conservará su propia configuración y sus scripts. Ninguno accederá directamente a las tablas del otro.

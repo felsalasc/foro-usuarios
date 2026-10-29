@@ -46,4 +46,14 @@ public class Usuario {
     public String getPasswordHash() { return passwordHash; }
     public Rol getRol() { return rol; }
     public Boolean getActivo() { return activo; }
+
+    public void actualizar(String nombre, String correo, String nuevoHash) {
+        this.nombre = nombre;
+        this.correo = correo;
+        if (nuevoHash != null) this.passwordHash = nuevoHash;
+    }
+
+    public void desactivar() { this.activo = false; }
+
+    public void cambiarRol(Rol rol) { this.rol = rol; }
 }
