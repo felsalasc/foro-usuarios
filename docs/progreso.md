@@ -45,4 +45,23 @@ Pre-flight: se consume la aplicación y el perfil local de Task 1; se produce PO
 
 Task 2: complete. Evidencia: clean verify, 22/22 pruebas, HTTP de registro comprobado. Scripts Oracle preparados pero sin ejecución Oracle real. Los cambios se conservan en el commit local de este bloque.
 
-Las tareas 3 a 5 del plan continúan pendientes. Próximo bloque: login, JWT e identidad vigente.
+## Registro de Task 3
+
+Plan: docs/plan-implementacion.md, Task 3: Login, JWT e identidad vigente.
+
+Pre-flight: el login consume USUARIOS, su correo normalizado y el PasswordEncoder de Task 2. El filtro produce un principal UsuarioResponse y ROLE_USUARIO o ROLE_ADMINISTRADOR a partir del registro vigente. El contrato HTTP se conserva. Las pruebas de contexto ahora activan local y test; la clave de fixture está solo en src/test/resources.
+
+- Dependencias Spring Security y OAuth2 JOSE resueltas mediante el BOM. Descarga y pruebas con permisos autorizados.
+- Prueba de flujo escrita primero. Fallo inicial: registro 201 esperado, 403 recibido después de agregar el starter de seguridad; faltaba la política pública de la API y aún no existían login/me. Log: .verificacion/auth-red.log.
+- Se añadieron LoginRequest/LoginResponse, AuthService, JwtService, filtro Bearer, cadena de seguridad y escritura de errores ProblemDetail. Emisión HS256, issuer foro-usuarios, audiencia foro-api, iat/exp, 900 segundos y reloj inyectado. Clave Base64 obligatoria, mínimo 32 bytes decodificados, sin valor predeterminado de producción.
+- Solo POST registro y POST login son públicos. Sin sesiones, formulario, Basic ni logout de sesión. Se configura CSRF desactivado para la API Bearer; no se agrega una política CORS abierta. Las credenciales incorrectas, cuentas inexistentes e inactivas tienen la misma respuesta de login y realizan una comparación BCrypt.
+- La identidad consulta la cuenta activa y el rol actual en cada petición; no confía en roles del JWT. El login rechaza passwords mayores a 72 bytes antes de compararlos, evitando coincidencias por truncado.
+- Hallazgo de revisión P2: JWT firmado sin aud podía causar NullPointerException y 500. La prueba audienciaAusenteEsTokenInvalido reprodujo el defecto antes de corregirlo; se agregó la guarda de ausencia y un caso HTTP en AuthApiTest. La prueba final y la suite completa pasaron después. Log de reproducción: .verificacion/auth-audience-red.log.
+- Ruling: excluir UserDetailsServiceAutoConfiguration. La aplicación autentica únicamente contra sus cuentas Oracle/H2; el usuario en memoria autogenerado por Boot era innecesario y producía un secreto temporal en logs. No era un acceso alternativo porque Basic y formulario estaban deshabilitados. La exclusión no cambia el contrato de la API.
+- Verificación final: clean verify, BUILD SUCCESS y código 0; 54 pruebas, 0 fallos, 0 errores, 0 omitidas. Incluye las 22 pruebas previas más 18 de API de autenticación y 14 de JWT. Log: .verificacion/auth-verify.log.
+- HTTP real del JAR: registro 201, login 200, me 200 con cuatro campos y sin secretos; ausencia de token, credenciales incorrectas, firma manipulada, audiencia ausente y vencimiento devuelven 401. Clave aleatoria solo en memoria, perfil local con H2; proceso cerrado al terminar. Log: .verificacion/auth-http.log.
+- Revisión independiente: el único hallazgo fue la audiencia ausente, corregido y verificado. La gestión administrativa y Oracle siguen fuera del alcance de este bloque.
+
+Task 3: complete. Evidencia: 54/54 pruebas, JAR generado y flujo HTTP real comprobado con H2. Documentación actualizada para exigir JWT_SECRET_BASE64 en ejecución. Commit local del bloque sin publicación.
+
+Las tareas 4 y 5 del plan continúan pendientes. Próximo bloque: gestión de cuentas, roles y protección del último administrador.

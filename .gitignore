@@ -1,5 +1,6 @@
 # Compilación y herramientas
 target/
+.verificacion/
 .m2/
 .tools/
 *.log

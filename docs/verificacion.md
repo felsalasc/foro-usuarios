@@ -1,6 +1,6 @@
 # Verificación de la base de Foro Usuarios
 
-Fecha: 29 de octubre de 2026. Alcance: Tasks 1 y 2 del plan. Se conserva la evidencia histórica del arranque y se agrega la verificación del registro.
+Fecha: 29 de octubre de 2026. Alcance: Tasks 1 a 3 del plan. Se conserva la evidencia histórica de cada bloque y se agrega la verificación de autenticación.
 
 ## Resultados
 
@@ -23,14 +23,14 @@ El arranque HTTP utilizó 127.0.0.1 y un puerto libre asignado automáticamente 
 
 ## Reproducir
 
-Con JDK 17 y las dependencias accesibles desde Maven Central o la caché del equipo, ejecutar desde la raíz:
+Con JDK 17 y las dependencias accesibles desde Maven Central o la caché del equipo, ejecutar desde la raíz. Para el JAR actual definir primero JWT_SECRET_BASE64 mediante el procedimiento de README:
 
 ```powershell
 .\mvnw.cmd clean verify
 java -jar target/foro-usuarios-0.0.1-SNAPSHOT.jar --spring.profiles.active=local --server.address=127.0.0.1 --server.port=0
 ```
 
-Consultar el puerto indicado por Tomcat y hacer una solicitud a `/`: por ahora corresponde un 404. Detener con Ctrl+C.
+Consultar el puerto indicado por Tomcat. En el bloque inicial `/` devolvía 404; en la versión actual es una ruta protegida y sin token devuelve 401. Probar registro, login y `/api/auth/me` según README. Detener con Ctrl+C.
 
 La verificación en este equipo se hizo con `mvnw.cmd -o -B -ntp clean verify` y una caché Maven existente seleccionada mediante `-Dmaven.repo.local`. JAVA_HOME apuntó a un JDK 17 ya disponible en el equipo. Estas selecciones solo corresponden al comando de comprobación; el proyecto no declara dependencias de rutas de otros repositorios.
 
@@ -44,7 +44,7 @@ Los logs locales .verificacion/red.log, .verificacion/green.log, .verificacion/v
 
 ## Límites del bloque
 
-El resultado anterior corresponde al bloque inicial de arranque. La verificación de registro siguiente lo amplía. Login, JWT, gestión de cuentas y roles, colección Postman y pruebas Oracle reales continúan pendientes.
+El resultado anterior corresponde al bloque inicial de arranque. Las verificaciones siguientes lo amplían. Gestión de cuentas y roles, colección Postman y pruebas Oracle reales continúan pendientes.
 
 ## Verificación de registro
 
@@ -70,3 +70,29 @@ Durante el desarrollo se detectó que desactivar coerciones escalares generales 
 La prueba HTTP externa inició el JAR en loopback y puerto aleatorio, envió cinco solicitudes y cerró el proceso al terminar. Los datos y contraseñas usados son solo de prueba y la base H2 se descarta al cerrar la aplicación.
 
 Para reproducir: ejecutar clean verify y utilizar el POST documentado en README. Evidencia local: .verificacion/registro-red.log, .verificacion/registro-verify.log y .verificacion/registro-http.log; informes JUnit en target/surefire-reports/. Los archivos generados no se versionan.
+
+## Verificación de autenticación
+
+| Comprobación | Resultado observado |
+|---|---|
+| Suite completa final | 54 pruebas, 0 fallos, 0 errores, 0 omitidas |
+| Distribución | AplicacionTest 1, RegistroApiTest 21, AuthApiTest 18, JwtServiceTest 14 |
+| Compilación | clean verify: BUILD SUCCESS y JAR ejecutable, código 0 |
+| Login | Correo normalizado, BCrypt, accessToken Bearer y expiresIn=900 |
+| Credenciales incorrectas | Mismo error 401 para contraseña incorrecta y cuenta inexistente/inactiva |
+| Identidad | me devuelve solo id/nombre/correo/rol y consulta el rol vigente |
+| Cuenta desactivada o eliminada | Token anterior rechazado con 401 |
+| JWT | Firma, issuer, audiencia, iat, exp, sujeto y vencimiento comprobados |
+| Tolerancia temporal | Aceptación a exp+29 s y rechazo a exp+31 s con Clock fijo |
+| Clave | Base64 válida de mínimo 32 bytes; casos inválidos y cortos rechazados |
+| HTTP real del JAR | Registro 201 → login 200 → me 200; errores 401 comprobados |
+| Revisión | Un hallazgo P2 corregido: ausencia de aud ya produce 401 |
+| Oracle | Pendiente de conexión y pruebas reales |
+
+Se añadieron pruebas antes del código de autenticación. El primer fallo evidenció que el starter de seguridad bloqueaba el registro por defecto; la configuración explícita dejó públicos solo registro/login. Más adelante una prueba dirigida reprodujo el NullPointerException con aud ausente. La corrección fue seguida de la suite completa y de una prueba HTTP con JWT firmado sin audiencia, que devolvió 401 ProblemDetail.
+
+La comprobación HTTP usó una clave aleatoria de 32 bytes generada en memoria por el script de diagnóstico local, sin escribirla ni mostrarla. Se comprobaron además Bearer en minúsculas, ausencia de cookie de sesión, rechazo de firma modificada y rechazo de expiración. El proceso se cerró al terminar. La identidad de cuentas desactivadas y los cambios de rol se comprobaron mediante integración con H2/JDBC en AuthApiTest; no se afirman como operaciones administrativas HTTP todavía.
+
+La autoconfiguración de usuarios en memoria de Spring Boot está excluida; la autenticación consulta USUARIOS. Los tokens no se registran en logs. La clave de fixture bajo src/test/resources es pública, exclusiva de tests y no se empaqueta en el JAR.
+
+Evidencia local: .verificacion/auth-red.log, .verificacion/auth-audience-red.log, .verificacion/auth-verify.log y .verificacion/auth-http.log. El script de diagnóstico y los logs permanecen excluidos de Git dentro de .verificacion/. La entrega no incorpora esas claves ni procesos locales.

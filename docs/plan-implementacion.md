@@ -59,11 +59,11 @@
 
 **Interfaces:** AuthService.login(LoginRequest): LoginResponse. JwtService.emitir(Long): String y validar(String): Long. GET /api/auth/me produce UsuarioResponse vigente. Spring Security solo permite registro y login anónimos; sin sesiones HTTP, con CSRF desactivado para esta API Bearer.
 
-- [ ] Escribir loginEmiteTokenYMeDevuelveIdentidad: registrar, login 200 con expiresIn=900 y Bearer, luego GET me 200 con id y rol. Ejecutar .\mvnw.cmd '-Dtest=AuthApiTest' test y observar el fallo antes de implementar.
-- [ ] Agregar Security y JOSE; implementar HS256, issuer, audience, exp y tolerancia de 30 segundos como define el contrato; clave obligatoria de al menos 32 bytes decodificados en ejecución. Inyectar Clock para probar el tiempo sin esperas.
-- [ ] Probar previamente y después: credencialesIncorrectas (401 genérico), firmaManipulada (401), tokenVencido (401), expAusente (401), issuerOAudienciaIncorrectos (401), sujetoInvalido (401) y meNoExponeSecretos.
-- [ ] Comprobar estado activo y rol en base de datos por petición; añadir cuentaDesactivadaPierdeAcceso y meDevuelveRolVigente. Errores de seguridad ProblemDetail, sin logs de secretos. Tests de registro mantienen endpoints públicos y clave exclusiva de prueba.
-- [ ] Ejecutar .\mvnw.cmd clean verify; registrar evidencia y commit local.
+- [x] Escribir loginEmiteTokenYMeDevuelveIdentidad: registrar, login 200 con expiresIn=900 y Bearer, luego GET me 200 con id y rol. Ejecutar .\mvnw.cmd '-Dtest=AuthApiTest' test y observar el fallo antes de implementar.
+- [x] Agregar Security y JOSE; implementar HS256, issuer, audience, exp y tolerancia de 30 segundos como define el contrato; clave obligatoria de al menos 32 bytes decodificados en ejecución. Inyectar Clock para probar el tiempo sin esperas.
+- [x] Probar previamente y después: credencialesIncorrectas (401 genérico), firmaManipulada (401), tokenVencido (401), expAusente (401), issuerOAudienciaIncorrectos (401), sujetoInvalido (401) y meNoExponeSecretos.
+- [x] Comprobar estado activo y rol en base de datos por petición; añadir cuentaDesactivadaPierdeAcceso y meDevuelveRolVigente. Errores de seguridad ProblemDetail, sin logs de secretos. Tests de registro mantienen endpoints públicos y clave exclusiva de prueba.
+- [x] Ejecutar .\mvnw.cmd clean verify; registrar evidencia y commit local.
 
 ## Task 4: Gestión de cuentas y privilegios
 

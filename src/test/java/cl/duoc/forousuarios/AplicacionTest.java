@@ -9,7 +9,7 @@ import org.springframework.test.context.ActiveProfiles;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
-@ActiveProfiles("local")
+@ActiveProfiles({"local", "test"})
 class AplicacionTest {
     @Autowired
     private JdbcTemplate jdbc;
