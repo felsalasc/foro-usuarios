@@ -47,11 +47,11 @@
 
 **Interfaces:** UsuarioResponse(Long id, String nombre, String correo, Rol rol). UsuarioService.registrar(RegistroRequest): UsuarioResponse. POST /api/auth/registro según contrato. USUARIOS con correo único y activo; password_hash solo interno.
 
-- [ ] Escribir registroPersisteHashYDevuelve201: POST válido → 201 y Location, respuesta sin password/passwordHash, SQL con un hash BCrypt que valida con PasswordEncoder.matches. Ejecutar .\mvnw.cmd '-Dtest=RegistroApiTest' test: fallo por registro aún inexistente.
-- [ ] Implementar entidad, enum, DTO, repositorio, servicio, controlador y errores. Nombre 1–100, correo válido hasta 254, contraseña 8–72 bytes UTF-8. Normalizar correo. Rechazar campos JSON desconocidos; nunca aceptar rol desde registro.
-- [ ] Agregar y ejecutar antes de cada cambio registroRechazaRol (400 sin fila), correoNormalizadoEsUnico (409), registroConcurrenteCorreoUnico (una sola fila), rechazaPasswordMultibyteExcesivo (400), obligatoriosInvalidos (400 sin fila). Proteger unicidad con constraint y traducir el conflicto.
-- [ ] Crear SQL Oracle USUARIOS con identity, tamaños compatibles, rol restringido, activo y correo único. Ninguna instrucción elimina tablas ajenas.
-- [ ] Ejecutar .\mvnw.cmd test y registrar resultado; commit local del bloque verificado.
+- [x] Escribir registroPersisteHashYDevuelve201: POST válido → 201 y Location, respuesta sin password/passwordHash, SQL con un hash BCrypt que valida con PasswordEncoder.matches. Ejecutar .\mvnw.cmd '-Dtest=RegistroApiTest' test: fallo por registro aún inexistente.
+- [x] Implementar entidad, enum, DTO, repositorio, servicio, controlador y errores. Nombre 1–100, correo válido hasta 254, contraseña 8–72 bytes UTF-8. Normalizar correo. Rechazar campos JSON desconocidos; nunca aceptar rol desde registro.
+- [x] Agregar y ejecutar antes de cada cambio registroRechazaRol (400 sin fila), correoNormalizadoEsUnico (409), registroConcurrenteCorreoUnico (una sola fila), rechazaPasswordMultibyteExcesivo (400), obligatoriosInvalidos (400 sin fila). Proteger unicidad con constraint y traducir el conflicto.
+- [x] Crear SQL Oracle USUARIOS con identity, tamaños compatibles, rol restringido, activo y correo único. Ninguna instrucción elimina tablas ajenas.
+- [x] Ejecutar .\mvnw.cmd test y registrar resultado; commit local del bloque verificado.
 
 ## Task 3: Login, JWT e identidad vigente
 

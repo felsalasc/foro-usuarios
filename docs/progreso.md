@@ -28,4 +28,21 @@ Task 1: complete. Verificación: Maven clean verify, 1/1 prueba aprobada; arranq
 
 La primera ejecución completa dentro del entorno restringido quedó detenida por acceso denegado al canal de instrumentación de Java. Se interrumpió esa sesión y se repitió la verificación con permisos autorizados, sin modificar código para eludir el bloqueo. El primer arranque HTTP restringido también falló por permiso de conexión loopback; la repetición autorizada fue exitosa. Estos incidentes y la advertencia de class sharing de OpenJDK son detalles del entorno, no resultados funcionales de Oracle.
 
-Las tareas 2 a 5 del plan continúan pendientes.
+## Registro de Task 2
+
+Plan: docs/plan-implementacion.md, Task 2: Registro y persistencia segura.
+
+Pre-flight: se consume la aplicación y el perfil local de Task 1; se produce POST /api/auth/registro y la tabla USUARIOS. No se añade todavía autenticación HTTP ni JWT. No hay conflicto con el contrato de identidad.
+
+- Dependencia spring-security-crypto 6.5.11 resuelta mediante el BOM de Spring Boot. No estaba en la caché inicial y se descargó con autorización desde Maven Central.
+- Pruebas escritas antes de la implementación. Primera prueba ejecutada: 201 esperado y 404 recibido, fallo por endpoint ausente, sin errores de infraestructura. Log local: .verificacion/registro-red.log.
+- Se añadieron entidad, rol, repositorio, DTO, validación, servicio transaccional, controlador, BCrypt y manejo de errores. SQL Oracle con identity y restricciones de unicidad, rol y estado. La normalización ocurre antes de la validación.
+- Ruling: agregar PasswordConfig, JsonConfig y validación PasswordUtf8 además de los archivos enumerados en el plan. Son unidades separadas para configuración de BCrypt, tipos JSON estrictos y límite de bytes; evita mezclar esas responsabilidades con el controlador. No cambia el contrato público.
+- La primera suite completa detectó un defecto real: Jackson aceptó password numérico convirtiéndolo a texto. Se añadió JsonConfig para rechazar coerciones Integer/Float/Boolean hacia texto. El caso que fallaba fue verificado después con la suite verde, junto con variantes numéricas y booleanas.
+- clean verify final: BUILD SUCCESS, código 0; 22 pruebas, cero fallos/errores/omitidas, JAR generado. El conflicto de unicidad registrado por Hibernate durante la prueba concurrente es el resultado provocado deliberadamente; la API devuelve 201 y 409 y se conserva una sola fila.
+- Comprobación HTTP real del JAR en H2: creación 201 con Location y respuesta sin secretos, correo normalizado, duplicado 409, campo rol 400, contraseña numérica 400 y contraseña corta 400. Proceso cerrado al terminar. Log local: .verificacion/registro-http.log.
+- Revisión independiente de solo lectura: sin hallazgos confirmados dentro del alcance de Task 2.
+
+Task 2: complete. Evidencia: clean verify, 22/22 pruebas, HTTP de registro comprobado. Scripts Oracle preparados pero sin ejecución Oracle real. Los cambios se conservan en el commit local de este bloque.
+
+Las tareas 3 a 5 del plan continúan pendientes. Próximo bloque: login, JWT e identidad vigente.

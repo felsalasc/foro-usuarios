@@ -4,7 +4,7 @@ Microservicio de usuarios para el sistema de foros de DSY2205, Semana 2. Proyect
 
 ## Estado actual
 
-Primer bloque: base Maven, clase de arranque, perfiles local y Oracle y prueba de conexión local. Registro, login, gestión de cuentas y roles se implementarán en los siguientes bloques. En este estado no hay endpoints de negocio: una solicitud a `/` devuelve 404.
+Base Maven y registro de usuarios implementados. POST `/api/auth/registro` valida la entrada, normaliza el correo, protege la contraseña con BCrypt y crea una cuenta activa con rol USUARIO. Login, consulta y gestión de cuentas y permisos se implementarán en los siguientes bloques. La ruta `/` devuelve 404.
 
 Esta aplicación tiene su propio repositorio Git y se compila por separado. La futura integración con `foro-contenido` será exclusivamente HTTP. No se requieren código fuente, JAR, tablas ni archivos de configuración de otro proyecto para compilar o iniciar esta base.
 
@@ -58,7 +58,38 @@ Remove-Item Env:ORACLE_PASSWORD
 
 Los valores de servicio, ruta y usuario del ejemplo son marcadores y deben ajustarse. Las variables no tienen credenciales predeterminadas. Spring Boot no carga `.env` automáticamente.
 
-Oracle usa `ddl-auto=validate` y no ejecuta SQL automáticamente. Los scripts para la tabla de usuarios se añadirán con la funcionalidad de registro. La conexión Oracle aún está pendiente de verificación.
+Antes de iniciar con Oracle, ejecutar [database/01_estructura.sql](database/01_estructura.sql) como propietario del esquema propio de usuarios. El script crea USUARIOS y sus restricciones, sin eliminar tablas anteriores; se ejecuta una sola vez. Oracle usa `ddl-auto=validate` y no ejecuta SQL automáticamente. La conexión y las operaciones reales contra Oracle aún están pendientes de verificación.
+
+## Registro de usuarios
+
+POST `http://localhost:8081/api/auth/registro`, con Content-Type `application/json`:
+
+```json
+{
+  "nombre": "Ana Pérez",
+  "correo": "ana@example.test",
+  "password": "ClaveSoloEjemplo123"
+}
+```
+
+Contraseña ilustrativa para pruebas locales. Respuesta: 201, cabecera Location `/api/usuarios/{id}` y JSON con id, nombre, correo y rol. El ID es generado por la base y el rol es siempre USUARIO al registrarse. La consulta GET del recurso indicado en Location se implementará en el bloque de gestión de cuentas.
+
+Reglas de entrada:
+
+- Nombre obligatorio, hasta 100 caracteres; se quitan espacios exteriores.
+- Correo obligatorio y válido, hasta 254 caracteres; se quitan espacios exteriores y se convierte a minúsculas antes de validar y guardar. La unicidad se exige también mediante una restricción de base de datos para cubrir solicitudes simultáneas.
+- Contraseña obligatoria, entre 8 y 72 bytes UTF-8. No se recorta ni normaliza; las letras acentuadas pueden ocupar más de un byte. BCrypt genera un hash con salt diferente por cuenta.
+- Solo se aceptan nombre, correo y password como cadenas de texto. Campos desconocidos como rol, id, activo o passwordHash producen 400.
+
+Un correo repetido produce 409. JSON malformado, tipos incorrectos y validaciones incumplidas producen 400. Los errores usan `application/problem+json`, con status, title y detail; los de validación incluyen errors por campo. No se devuelven la contraseña ni su hash.
+
+Ejemplo PowerShell con el servidor iniciado:
+
+```powershell
+$taskBody = @{ nombre = 'Ana Pérez'; correo = 'ana@example.test'; password = 'ClaveSoloEjemplo123' } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8081/api/auth/registro' `
+    -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($taskBody))
+```
 
 ## Pruebas
 
@@ -67,7 +98,7 @@ Oracle usa `ddl-auto=validate` y no ejecuta SQL automáticamente. Los scripts pa
 .\mvnw.cmd clean verify
 ```
 
-`AplicacionTest` fuerza el perfil `local`, inicia el contexto completo y comprueba una conexión real a H2 con JDBC. Los resultados están en `target/surefire-reports/`. `verify` genera el JAR ejecutable propio en `target/`.
+`AplicacionTest` comprueba una conexión real a H2 con JDBC. `RegistroApiTest` cubre registro, hash y salt BCrypt, normalización, concurrencia, unicidad, campos reservados, límites UTF-8, validación y tipos JSON. Las pruebas fuerzan el perfil `local`, usan servicios y repositorios reales y no requieren Oracle. Los resultados están en `target/surefire-reports/`. `verify` genera el JAR ejecutable propio en `target/`.
 
 ## Git y documentación
 

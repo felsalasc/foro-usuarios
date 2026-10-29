@@ -1,6 +1,6 @@
 # Verificación de la base de Foro Usuarios
 
-Fecha: 29 de octubre de 2026. Alcance: Task 1 del plan, base autónoma y configuración.
+Fecha: 29 de octubre de 2026. Alcance: Tasks 1 y 2 del plan. Se conserva la evidencia histórica del arranque y se agrega la verificación del registro.
 
 ## Resultados
 
@@ -44,4 +44,29 @@ Los logs locales .verificacion/red.log, .verificacion/green.log, .verificacion/v
 
 ## Límites del bloque
 
-La aplicación contiene únicamente la base de arranque. No se han implementado todavía registro, login, roles, tablas de usuarios, colección Postman ni scripts SQL. Este resultado no acredita aún el CRUD ni la conexión Oracle exigidos en la evaluación.
+El resultado anterior corresponde al bloque inicial de arranque. La verificación de registro siguiente lo amplía. Login, JWT, gestión de cuentas y roles, colección Postman y pruebas Oracle reales continúan pendientes.
+
+## Verificación de registro
+
+| Comprobación | Resultado observado |
+|---|---|
+| Prueba antes del endpoint | Fallo esperado: 201 requerido, 404 recibido |
+| Suite completa final | 22 pruebas, 0 fallos, 0 errores, 0 omitidas |
+| Compilación y empaquetado | clean verify, BUILD SUCCESS, código 0 |
+| Contraseñas | Hash BCrypt de 60 caracteres, matches correcto y salt diferente entre cuentas |
+| Límites | Rechazo fuera de 8–72 bytes UTF-8; aceptación de 72 bytes multibyte |
+| Correo | Normalización y unicidad persistente |
+| Concurrencia | Dos altas del mismo correo: una 201, otra 409 y una sola fila |
+| Campos reservados | rol, id, activo y passwordHash rechazados con 400 |
+| JSON | Malformado y coerciones numéricas/booleanas rechazados con 400 |
+| HTTP real del JAR | Registro 201 y Location; duplicado 409; validaciones 400 |
+| Revisión independiente | Sin hallazgos confirmados en Task 2 |
+| Oracle | SQL preparado; ejecución y CRUD real pendientes |
+
+La suite usa H2 y no dobles del repositorio ni del encoder. La prueba concurrente tiene transacciones independientes; el error de unicidad de Hibernate en el log es intencional y su respuesta 409 está verificada.
+
+Durante el desarrollo se detectó que desactivar coerciones escalares generales no impedía convertir números a String. Un test devolvió 201 para password numérico cuando debía devolver 400; JsonConfig configura específicamente los tipos textuales para rechazar Integer, Float y Boolean. La suite completa posterior confirmó la corrección.
+
+La prueba HTTP externa inició el JAR en loopback y puerto aleatorio, envió cinco solicitudes y cerró el proceso al terminar. Los datos y contraseñas usados son solo de prueba y la base H2 se descarta al cerrar la aplicación.
+
+Para reproducir: ejecutar clean verify y utilizar el POST documentado en README. Evidencia local: .verificacion/registro-red.log, .verificacion/registro-verify.log y .verificacion/registro-http.log; informes JUnit en target/surefire-reports/. Los archivos generados no se versionan.
