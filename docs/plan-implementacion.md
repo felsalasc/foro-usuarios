@@ -84,7 +84,7 @@
 
 **Interfaces:** Repositorio ejecutable y documentado sin requerir contenido. Colección publica userId y accessToken como variables de ejecución, sin valores secretos guardados. SQL demo usa variables bind para hashes y datos de cuentas, documentando cómo generarlos localmente; el estado activo y el rol son explícitos.
 
-- [ ] Ejecutar .\mvnw.cmd clean verify: suite verde y JAR propio.
+- [x] Ejecutar .\mvnw.cmd clean verify: suite verde y JAR propio.
 - [ ] Comprobar instancia disponible; preparar esquema dedicado de usuarios y ejecutar SQL sin modificar LIBROS. Generar hashes mediante la aplicación y cargar tres cuentas activas, o usar inicializador más registro según README. Verificar COUNT y roles.
 - [ ] Ejecutar Postman real contra perfil Oracle: CRUD, login, me, 400/401/403/404/409; reiniciar y comprobar persistencia. Si Oracle no está accesible, registrar pendiente sin declarar cumplido.
 - [ ] Comprobar funcionamiento del JAR desde su repositorio, revisar git diff --check y git status --short. Documentar comandos y resultados reales; commit local verificado. No crear remoto ni subir ZIP automáticamente.

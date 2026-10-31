@@ -82,3 +82,11 @@ Pre-flight: se consume el principal UsuarioResponse generado por el filtro y la 
 Task 4: implementación y verificación local completas; concurrencia en Oracle pendiente. Cambios guardados en el commit local del bloque, sin publicación.
 
 Task 5 sigue pendiente: Oracle real, colección Postman, datos de demostración y matriz. La base independiente de foro-contenido puede prepararse a continuación sin depender de esa comprobación; cada repositorio conservará su propia configuración y sus scripts. Ninguno accederá directamente a las tablas del otro.
+
+## Preparación parcial de Task 5 — 31 de octubre de 2026
+
+Se prepararon colección/entorno Postman propios, SQL de verificación, documentación Oracle, matriz y guion del video. Ver docs/verificacion.md para resultados: compilación independiente verde (85 usuarios / 138 contenido), 85 flujos HTTP locales verificados y scripts JSON/JS revisados. Se eligió carga de usuarios mediante inicializador + registro, alternativa prevista por el plan, en lugar de SQL con hashes predefinidos.
+
+Newman no se instaló porque su descarga fue rechazada. El reproductor HTTP local no se presenta como ejecución del runtime Postman. Wallet existente sin credenciales ni confirmación de instancia/esquemas; se solicitó esa información sin pedir contraseñas por chat. No se conectó ni modificó Oracle. Este avance se registra en commit local propio; el bloque sigue incompleto y no se publican remotos ni una entrega final.
+
+Actualización de preparación: el usuario confirmó BIBLIOTECA activa y ambos esquemas pendientes. Las instrucciones SQL como administrador están preparadas en docs/oracle-y-entrega.md; no se ejecutaron. La revisión independiente encontró que una aserción fallida con HTTP esperado no detenía la colección. Se reprodujo y corrigió: las guardas ahora detienen el recorrido ante aserciones, JSON o estructura inválidos. También se reprodujo y corrigió el escape de comillas/barras en la contraseña del login administrativo mediante JSON.stringify. Ocho casos Node focalizados pasaron RED→GREEN sobre esos scripts; son dobles mínimos del contrato de callbacks/variables, no el runtime Postman. Los 85 flujos HTTP se volvieron a verificar con los archivos finales. No hubo cambios de Java ni necesidad de repetir la suite Maven ya aprobada después de esos ajustes de colección.

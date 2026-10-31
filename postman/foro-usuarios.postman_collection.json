@@ -1,0 +1,1374 @@
+{
+  "info": {
+    "name": "Foro usuarios — recorrido verificable",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Ejecutar completa en Collection Runner, en orden. Requiere administrador existente. Crea cuentas/datos de demostración y modifica solo sus registros nuevos; mantiene mínimos. Tokens y contraseñas de prueba solo en variables locales de ejecución. Oracle y persistencia se acreditan aparte; ver postman/README.md."
+  },
+  "item": [
+    {
+      "name": "01. Login del administrador existente",
+      "request": {
+        "method": "POST",
+        "url": "{{usuariosBaseUrl}}/api/auth/login",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{{adminLoginJson}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.environment.get('adminCorreo') || !pm.environment.get('adminPassword')) { pm.execution.setNextRequest(null); throw new Error('Configurar adminCorreo y adminPassword localmente antes de ejecutar'); }",
+              "pm.variables.set('adminLoginJson', JSON.stringify({correo: pm.environment.get('adminCorreo'), password: pm.environment.get('adminPassword')}));",
+              "const id = pm.variables.replaceIn('{{$guid}}').replace(/-/g, '').slice(0, 16);",
+              "pm.variables.set('runId', id);",
+              "pm.variables.set('passwordPrueba', 'Prueba-Aa9-' + pm.variables.replaceIn('{{$guid}}'));",
+              "pm.variables.set('correoA', 'a-' + id + '@example.test'); pm.variables.set('correoB', 'b-' + id + '@example.test');",
+              "pm.variables.set('correoTemporal', 'baja-' + id + '@example.test');",
+              "pm.variables.set('tokenInvalido', 'token-invalido');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "if (r.accessToken === undefined || r.accessToken === null) throw new Error('Falta el campo accessToken');",
+              "if (pm.response.code === 200) pm.variables.set('adminToken', r.accessToken);",
+              "if (r.usuario.id === undefined || r.usuario.id === null) throw new Error('Falta el campo usuario.id');",
+              "if (pm.response.code === 200) pm.variables.set('adminId', r.usuario.id);",
+              "verificar(\"Rol administrador\", () => { pm.expect(r.usuario.rol).to.eql('ADMINISTRADOR'); });",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. Registrar usuario A",
+      "request": {
+        "method": "POST",
+        "url": "{{usuariosBaseUrl}}/api/auth/registro",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"nombre\": \"Usuario A Postman\", \"correo\": \"{{correoA}}\", \"password\": \"{{passwordPrueba}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 201', () => pm.response.to.have.status(201));",
+              "if (pm.response.code !== 201) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "if (r.id === undefined || r.id === null) throw new Error('Falta el campo id');",
+              "if (pm.response.code === 201) pm.variables.set('userAId', r.id);",
+              "verificar(\"Sin secretos\", () => { pm.expect(r).not.to.have.property('password'); pm.expect(r).not.to.have.property('passwordHash'); });",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03. Registrar usuario B",
+      "request": {
+        "method": "POST",
+        "url": "{{usuariosBaseUrl}}/api/auth/registro",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"nombre\": \"Usuario B Postman\", \"correo\": \"{{correoB}}\", \"password\": \"{{passwordPrueba}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 201', () => pm.response.to.have.status(201));",
+              "if (pm.response.code !== 201) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "if (r.id === undefined || r.id === null) throw new Error('Falta el campo id');",
+              "if (pm.response.code === 201) pm.variables.set('userBId', r.id);",
+              "verificar(\"Sin secretos\", () => { pm.expect(r).not.to.have.property('password'); pm.expect(r).not.to.have.property('passwordHash'); });",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04. Login usuario A",
+      "request": {
+        "method": "POST",
+        "url": "{{usuariosBaseUrl}}/api/auth/login",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"correo\": \"{{correoA}}\", \"password\": \"{{passwordPrueba}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "if (r.accessToken === undefined || r.accessToken === null) throw new Error('Falta el campo accessToken');",
+              "if (pm.response.code === 200) pm.variables.set('tokenA', r.accessToken);",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05. Login usuario B",
+      "request": {
+        "method": "POST",
+        "url": "{{usuariosBaseUrl}}/api/auth/login",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"correo\": \"{{correoB}}\", \"password\": \"{{passwordPrueba}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "if (r.accessToken === undefined || r.accessToken === null) throw new Error('Falta el campo accessToken');",
+              "if (pm.response.code === 200) pm.variables.set('tokenB', r.accessToken);",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06. Identidad vigente",
+      "request": {
+        "method": "GET",
+        "url": "{{usuariosBaseUrl}}/api/auth/me",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenA}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "verificar(\"ID y rol\", () => { pm.expect(r.id).to.eql(Number(pm.variables.get('userAId'))); pm.expect(r.rol).to.eql('USUARIO'); });",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07. Sin credencial",
+      "request": {
+        "method": "GET",
+        "url": "{{usuariosBaseUrl}}/api/auth/me",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 401', () => pm.response.to.have.status(401));",
+              "if (pm.response.code !== 401) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08. Token inválido",
+      "request": {
+        "method": "GET",
+        "url": "{{usuariosBaseUrl}}/api/auth/me",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenInvalido}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 401', () => pm.response.to.have.status(401));",
+              "if (pm.response.code !== 401) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09. Login incorrecto",
+      "request": {
+        "method": "POST",
+        "url": "{{usuariosBaseUrl}}/api/auth/login",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"correo\": \"{{correoA}}\", \"password\": \"Otra-Clave-Incorrecta-123\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 401', () => pm.response.to.have.status(401));",
+              "if (pm.response.code !== 401) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Usuario no lista cuentas",
+      "request": {
+        "method": "GET",
+        "url": "{{usuariosBaseUrl}}/api/usuarios",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenA}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 403', () => pm.response.to.have.status(403));",
+              "if (pm.response.code !== 403) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. Administrador lista cuentas",
+      "request": {
+        "method": "GET",
+        "url": "{{usuariosBaseUrl}}/api/usuarios",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "verificar(\"Al menos tres cuentas activas\", () => { pm.expect(r.length).to.be.at.least(3); });",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. Consultar cuenta propia",
+      "request": {
+        "method": "GET",
+        "url": "{{usuariosBaseUrl}}/api/usuarios/{{userAId}}",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenA}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13. Consultar cuenta ajena denegado",
+      "request": {
+        "method": "GET",
+        "url": "{{usuariosBaseUrl}}/api/usuarios/{{userBId}}",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenA}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 403', () => pm.response.to.have.status(403));",
+              "if (pm.response.code !== 403) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14. Editar cuenta propia",
+      "request": {
+        "method": "PUT",
+        "url": "{{usuariosBaseUrl}}/api/usuarios/{{userAId}}",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenA}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"nombre\": \"Perfil actualizado\", \"correo\": \"{{correoA}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15. Editar cuenta ajena denegado",
+      "request": {
+        "method": "PUT",
+        "url": "{{usuariosBaseUrl}}/api/usuarios/{{userBId}}",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenA}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"nombre\": \"Ajeno\", \"correo\": \"{{correoB}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 403', () => pm.response.to.have.status(403));",
+              "if (pm.response.code !== 403) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "16. Correo duplicado en registro",
+      "request": {
+        "method": "POST",
+        "url": "{{usuariosBaseUrl}}/api/auth/registro",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"nombre\": \"Duplicado\", \"correo\": \"{{correoA}}\", \"password\": \"{{passwordPrueba}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 409', () => pm.response.to.have.status(409));",
+              "if (pm.response.code !== 409) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "17. Registro no permite asignar rol",
+      "request": {
+        "method": "POST",
+        "url": "{{usuariosBaseUrl}}/api/auth/registro",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"nombre\": \"Inválido\", \"correo\": \"rol-{{runId}}@example.test\", \"password\": \"{{passwordPrueba}}\", \"rol\": \"ADMINISTRADOR\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 400', () => pm.response.to.have.status(400));",
+              "if (pm.response.code !== 400) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18. Correo inválido",
+      "request": {
+        "method": "POST",
+        "url": "{{usuariosBaseUrl}}/api/auth/registro",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"nombre\": \"Inválido\", \"correo\": \"sin-arroba\", \"password\": \"{{passwordPrueba}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 400', () => pm.response.to.have.status(400));",
+              "if (pm.response.code !== 400) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "19. Correo duplicado en edición",
+      "request": {
+        "method": "PUT",
+        "url": "{{usuariosBaseUrl}}/api/usuarios/{{userAId}}",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenA}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"nombre\": \"Duplicado\", \"correo\": \"{{correoB}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 409', () => pm.response.to.have.status(409));",
+              "if (pm.response.code !== 409) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "20. Cuenta inexistente",
+      "request": {
+        "method": "GET",
+        "url": "{{usuariosBaseUrl}}/api/usuarios/9999999999999999",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 404', () => pm.response.to.have.status(404));",
+              "if (pm.response.code !== 404) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "21. Usuario no cambia roles",
+      "request": {
+        "method": "PUT",
+        "url": "{{usuariosBaseUrl}}/api/usuarios/{{userAId}}/rol",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenA}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"rol\": \"ADMINISTRADOR\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 403', () => pm.response.to.have.status(403));",
+              "if (pm.response.code !== 403) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "22. Promover cuenta de prueba",
+      "request": {
+        "method": "PUT",
+        "url": "{{usuariosBaseUrl}}/api/usuarios/{{userAId}}/rol",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"rol\": \"ADMINISTRADOR\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "23. Token anterior refleja nuevo rol",
+      "request": {
+        "method": "GET",
+        "url": "{{usuariosBaseUrl}}/api/usuarios",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenA}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "24. Restituir rol de cuenta de prueba",
+      "request": {
+        "method": "PUT",
+        "url": "{{usuariosBaseUrl}}/api/usuarios/{{userAId}}/rol",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"rol\": \"USUARIO\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "25. Token anterior pierde privilegio",
+      "request": {
+        "method": "GET",
+        "url": "{{usuariosBaseUrl}}/api/usuarios",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenA}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 403', () => pm.response.to.have.status(403));",
+              "if (pm.response.code !== 403) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "26. Registrar cuenta para baja lógica",
+      "request": {
+        "method": "POST",
+        "url": "{{usuariosBaseUrl}}/api/auth/registro",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"nombre\": \"Temporal Postman\", \"correo\": \"{{correoTemporal}}\", \"password\": \"{{passwordPrueba}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 201', () => pm.response.to.have.status(201));",
+              "if (pm.response.code !== 201) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "if (r.id === undefined || r.id === null) throw new Error('Falta el campo id');",
+              "if (pm.response.code === 201) pm.variables.set('bajaId', r.id);",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "27. Login cuenta para baja",
+      "request": {
+        "method": "POST",
+        "url": "{{usuariosBaseUrl}}/api/auth/login",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"correo\": \"{{correoTemporal}}\", \"password\": \"{{passwordPrueba}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "if (r.accessToken === undefined || r.accessToken === null) throw new Error('Falta el campo accessToken');",
+              "if (pm.response.code === 200) pm.variables.set('tokenBaja', r.accessToken);",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "28. Desactivar cuenta temporal propia",
+      "request": {
+        "method": "DELETE",
+        "url": "{{usuariosBaseUrl}}/api/usuarios/{{bajaId}}",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenBaja}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 204', () => pm.response.to.have.status(204));",
+              "if (pm.response.code !== 204) { pm.execution.setNextRequest(null); } else {",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "29. Token de cuenta desactivada rechazado",
+      "request": {
+        "method": "GET",
+        "url": "{{usuariosBaseUrl}}/api/auth/me",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenBaja}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 401', () => pm.response.to.have.status(401));",
+              "if (pm.response.code !== 401) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "30. Cuenta inactiva no se consulta",
+      "request": {
+        "method": "GET",
+        "url": "{{usuariosBaseUrl}}/api/usuarios/{{bajaId}}",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 404', () => pm.response.to.have.status(404));",
+              "if (pm.response.code !== 404) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "31. Cuenta inactiva no inicia sesión",
+      "request": {
+        "method": "POST",
+        "url": "{{usuariosBaseUrl}}/api/auth/login",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json, application/problem+json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"correo\": \"{{correoTemporal}}\", \"password\": \"{{passwordPrueba}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function verificar(nombre, fn) { pm.test(nombre, () => { try { fn(); } catch (error) { pm.execution.setNextRequest(null); throw error; } }); }",
+              "try {",
+              "verificar('HTTP 401', () => pm.response.to.have.status(401));",
+              "if (pm.response.code !== 401) { pm.execution.setNextRequest(null); } else {",
+              "const r = pm.response.json();",
+              "}",
+              "} catch (error) { pm.execution.setNextRequest(null); pm.test('Respuesta JSON con estructura válida', () => { throw error; }); }"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
