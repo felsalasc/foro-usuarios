@@ -144,3 +144,7 @@ Actualización: BIBLIOTECA activa según el usuario; FORO_USUARIOS y FORO_CONTEN
 31 de octubre de 2026: el usuario confirmó esquemas y tablas creados, cinco categorías cargadas y ambos servidores iniciados con perfil oracle. La consulta de USUARIOS mostró al administrador activo con ID 1. Posteriormente aportó el resumen real del Runner de usuarios: 31 solicitudes, 36 aserciones aprobadas, cero errores y cero fallos visibles. Se conserva la captura sin secretos en [evidencias/2026-10-31-postman-usuarios.md](evidencias/2026-10-31-postman-usuarios.md).
 
 La ejecución real de Postman de usuarios deja de estar pendiente. Continúan pendientes la ejecución de contenido, la comprobación SQL final, reinicio/persistencia, concurrencia Oracle y la entrega. La evidencia proviene del usuario; no se afirma ejecución directa por el agente.
+
+## Conteos Oracle confirmados por SQL — antes del reinicio
+
+31 de octubre de 2026, evidencia aportada por el usuario: 7 cuentas: 1 ADMINISTRADOR activo, 4 USUARIO activos y 2 USUARIO inactivos. Total activo: 5. Las bajas lógicas conservan sus filas. Captura conservada en [evidencias/2026-10-31-oracle-conteos-usuarios.md](evidencias/2026-10-31-oracle-conteos-usuarios.md). El siguiente paso es reiniciar ambos servidores conservando sus variables y repetir las consultas sin volver a ejecutar las colecciones, para no agregar datos nuevos. Persistencia tras reinicio, integridad/bloqueos y verificaciones adicionales continúan pendientes.
