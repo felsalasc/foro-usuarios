@@ -100,3 +100,7 @@ La ejecución real de Postman de usuarios deja de estar pendiente. Continúan pe
 ## Conteos Oracle confirmados por SQL — antes del reinicio
 
 31 de octubre de 2026, evidencia aportada por el usuario: 7 cuentas: 1 ADMINISTRADOR activo, 4 USUARIO activos y 2 USUARIO inactivos. Total activo: 5. Las bajas lógicas conservan sus filas. Captura conservada en [evidencias/2026-10-31-oracle-conteos-usuarios.md](evidencias/2026-10-31-oracle-conteos-usuarios.md). El siguiente paso es reiniciar ambos servidores conservando sus variables y repetir las consultas sin volver a ejecutar las colecciones, para no agregar datos nuevos. Persistencia tras reinicio, integridad/bloqueos y verificaciones adicionales continúan pendientes.
+
+## Persistencia tras reiniciar aplicaciones — confirmación del usuario
+
+31 de octubre de 2026: el usuario confirmó que ambas consultas SQL mantienen los conteos anteriores tras el reinicio guiado de los JAR, sin repetir colecciones. 7 cuentas: 1 administrador activo, 4 usuarios activos y 2 usuarios inactivos. Ver [confirmación y límites de evidencia](evidencias/2026-10-31-oracle-reinicio.md). No hay captura posterior todavía ni comprobación directa del agente. Se registra conservación de conteos al reiniciar aplicaciones; no se extrapola a reinicio del servicio Oracle ni a igualdad de cada campo. Las comprobaciones de integridad, búsqueda CLOB larga, caída de identidad y concurrencia Oracle siguen pendientes.
