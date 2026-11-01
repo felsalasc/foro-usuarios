@@ -14,6 +14,10 @@ bin/
 .DS_Store
 Thumbs.db
 
+# Material de apoyo conservado localmente
+/docs/
+/postman/
+
 # Variables, credenciales y certificados (en cualquier subcarpeta)
 .env
 .env.*
