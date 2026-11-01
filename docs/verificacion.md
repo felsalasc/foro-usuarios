@@ -138,3 +138,9 @@ Evidencia local: .verificacion/usuarios-red.log, .verificacion/usuarios-verify.l
 - Oracle real, bloqueos, persistencia tras reiniciar, runtime/aserciones Postman, enlaces remotos, video y entrega final permanecen pendientes. No se asignan puntos de la pauta por anticipado ni se marca cerrado ese bloque.
 
 Actualización: BIBLIOTECA activa según el usuario; FORO_USUARIOS y FORO_CONTENIDO aún sin crear. La revisión de colecciones identificó la parada incompleta ante aserciones; corregida junto con el escape JSON de credenciales. Ocho pruebas focalizadas en Node reprodujeron rol/estructura/JSON inválidos y contraseña con comillas/barras en ambas colecciones, y aprobaron tras corregir. Usan un doble mínimo de pm.test/variables y no sustituyen ejecutar Postman. Recompilación de scripts y 85 flujos HTTP finales aprobados. Oracle no se ha conectado ni modificado.
+
+## Evidencia aportada: Postman usuarios sobre Oracle
+
+31 de octubre de 2026: el usuario confirmó esquemas y tablas creados, cinco categorías cargadas y ambos servidores iniciados con perfil oracle. La consulta de USUARIOS mostró al administrador activo con ID 1. Posteriormente aportó el resumen real del Runner de usuarios: 31 solicitudes, 36 aserciones aprobadas, cero errores y cero fallos visibles. Se conserva la captura sin secretos en [evidencias/2026-10-31-postman-usuarios.md](evidencias/2026-10-31-postman-usuarios.md).
+
+La ejecución real de Postman de usuarios deja de estar pendiente. Continúan pendientes la ejecución de contenido, la comprobación SQL final, reinicio/persistencia, concurrencia Oracle y la entrega. La evidencia proviene del usuario; no se afirma ejecución directa por el agente.
