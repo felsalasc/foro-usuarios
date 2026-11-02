@@ -1,12 +1,12 @@
 # Foro Usuarios
 
-Microservicio de usuarios para el sistema de foros de DSY2205, Semana 2. Proyecto Spring Boot independiente con paquete base `cl.duoc.forousuarios` y puerto predeterminado **8081**.
+Microservicio REST para registro, autenticación y gestión de cuentas de un foro. Aplicación Spring Boot independiente con puerto predeterminado **8081**.
 
-## Estado actual
+## Funcionamiento
 
-Registro, inicio de sesión, identidad autenticada, gestión de cuentas y roles implementados. Cada usuario gestiona su cuenta; un administrador también puede listar y gestionar otras cuentas y cambiar roles. La eliminación desactiva la cuenta y bloquea su autenticación. Las rutas protegidas sin token devuelven 401, incluida `/`. La conexión Oracle y las evidencias Postman siguen pendientes.
+El servicio permite registrar cuentas, iniciar sesión, consultar la identidad autenticada y gestionar cuentas y roles. Cada usuario gestiona su cuenta; un administrador también puede listar y gestionar otras cuentas y cambiar roles. La eliminación desactiva la cuenta y bloquea su autenticación. Las rutas protegidas sin token devuelven 401, incluida `/`.
 
-Esta aplicación tiene su propio repositorio Git y se compila por separado. La futura integración con `foro-contenido` será exclusivamente HTTP. No se requieren código fuente, JAR, tablas ni archivos de configuración de otro proyecto para compilar o iniciar esta base.
+Esta aplicación tiene su propio repositorio Git y se compila por separado. La integración con `foro-contenido` se realiza exclusivamente mediante HTTP a través de `/api/auth/me`. No requiere código fuente, JAR, tablas ni configuración de otro proyecto para compilarse o iniciarse.
 
 ## Requisitos
 
@@ -24,7 +24,7 @@ java -version
 
 En Linux o macOS usar `sh ./mvnw clean verify`, con JDK 17 disponible.
 
-## Desarrollo local
+## Ejecución local
 
 Antes de iniciar, definir `JWT_SECRET_BASE64` con una clave aleatoria de al menos 32 bytes codificada en Base64. Es obligatoria para todos los perfiles de ejecución y no tiene valor predeterminado. Para generar una clave en esta terminal sin mostrarla:
 
@@ -42,7 +42,7 @@ Mantener la misma clave entre reinicios si se desea conservar la validez de los 
 .\mvnw.cmd spring-boot:run '-Dspring-boot.run.profiles=local'
 ```
 
-El perfil `local` usa H2 en memoria en modo Oracle. Hibernate crea y elimina el esquema local; los datos se pierden al detener la aplicación. La consola H2 está deshabilitada. Este perfil sirve para desarrollo, no acredita una conexión real a Oracle.
+El perfil `local` usa H2 en memoria en modo Oracle. Hibernate crea y elimina el esquema local; los datos se pierden al detener la aplicación. La consola H2 está deshabilitada. Para conservar los datos entre reinicios, usar el perfil `oracle`.
 
 El perfil predeterminado es `local`. Si el entorno ya define `SPRING_PROFILES_ACTIVE`, ese valor prevalece; usar el perfil explícito mostrado para evitar confusiones. No activar `local` y `oracle` simultáneamente.
 
@@ -70,7 +70,7 @@ Remove-Item Env:ORACLE_PASSWORD
 
 Los valores de servicio, ruta y usuario del ejemplo son marcadores y deben ajustarse. Las variables no tienen credenciales predeterminadas. Spring Boot no carga `.env` automáticamente.
 
-Antes de iniciar con Oracle, ejecutar [database/01_estructura.sql](database/01_estructura.sql) como propietario del esquema propio de usuarios. El script crea USUARIOS y sus restricciones, sin eliminar tablas anteriores; se ejecuta una sola vez. Oracle usa `ddl-auto=validate` y no ejecuta SQL automáticamente. La conexión y las operaciones reales contra Oracle aún están pendientes de verificación.
+Antes de iniciar con Oracle, ejecutar [database/01_estructura.sql](database/01_estructura.sql) como propietario del esquema propio de usuarios. El script crea USUARIOS y sus restricciones, sin eliminar tablas anteriores; se ejecuta una sola vez. Oracle usa `ddl-auto=validate` y no ejecuta SQL automáticamente.
 
 ## Registro de usuarios
 
@@ -139,7 +139,7 @@ PUT de cuenta requiere nombre y correo; password es opcional. Omitirlo o enviar 
 
 Ejemplo de cambio de rol: `{"rol":"ADMINISTRADOR"}` o `{"rol":"USUARIO"}`. Los valores numéricos, desconocidos o nulos producen 400. Una petición sin permiso devuelve 403; una cuenta inexistente o inactiva, 404; un correo duplicado o intento de quitar el último administrador activo, 409.
 
-No se permite desactivar al último administrador activo ni cambiarlo a USUARIO. Las operaciones que pueden quitar ese privilegio bloquean primero las filas de administradores activos en orden de ID y hacen el recuento después; la actualización del destino también usa bloqueo y lectura actualizada. Esta regla se prueba con solicitudes concurrentes en H2 y debe comprobarse adicionalmente en Oracle.
+No se permite desactivar al último administrador activo ni cambiarlo a USUARIO. Las operaciones que pueden quitar ese privilegio bloquean primero las filas de administradores activos en orden de ID y hacen el recuento después; la actualización del destino también usa bloqueo y lectura actualizada.
 
 DELETE conserva la fila con ACTIVO=0 para preservar la autoría histórica del foro. La cuenta deja de aparecer en el listado ordinario, no se consulta por ID y sus tokens reciben 401. Su correo permanece reservado: no se permite registrar otra cuenta con el mismo correo.
 
@@ -170,31 +170,15 @@ Ejecutar la inicialización con una instancia a la vez: los arranques simultáne
 .\mvnw.cmd clean verify
 ```
 
-`AplicacionTest` comprueba una conexión real a H2 con JDBC. `RegistroApiTest` cubre registro, hash y salt BCrypt, normalización, concurrencia, unicidad, campos reservados, límites UTF-8, validación y tipos JSON. `AuthApiTest` prueba el flujo completo de login e identidad y los rechazos de autenticación. `JwtServiceTest` comprueba firma, claims, clave y vencimiento con reloj fijo, sin esperas.
+Las pruebas cubren registro, autenticación JWT, validación JSON, permisos, gestión de cuentas y roles, baja lógica, inicialización del administrador y protección del último administrador ante operaciones concurrentes.
 
-Las pruebas de contexto fuerzan los perfiles `local` y `test`, usan servicios y repositorios reales y no requieren Oracle ni una clave de producción. El perfil `test` solo aporta la clave pública de fixture desde los recursos de pruebas; no usarla en ejecución real. Los resultados están en `target/surefire-reports/`. `verify` genera el JAR ejecutable propio en `target/`.
+Las pruebas de integración utilizan H2 y los perfiles `local` y `test`; no necesitan Oracle ni el servicio de contenido. La clave JWT de pruebas está en los recursos de test y no se incluye en el JAR. No utilizarla como clave de ejecución.
 
-`UsuariosApiTest` cubre permisos, consulta, edición, cambio de contraseña/rol, baja lógica y protección del último administrador. `AdministradorConcurrenteTest` prueba desactivaciones y cambios de rol simultáneos, y que una edición de perfil no restaure un rol anterior. Las pruebas del inicializador verifican habilitación explícita, idempotencia y credenciales inválidas. El perfil test también deshabilita el inicializador por defecto; sus pruebas de habilitación usan una base H2 aislada.
+Los informes se generan en `target/surefire-reports/`. `clean verify` genera el JAR ejecutable en `target/`.
 
-## Git y documentación
+## Base de datos y archivos locales
 
-Rama inicial de trabajo: `desarrollo`. El repositorio remoto se configurará al preparar la publicación con autorización del usuario.
+- [Estructura Oracle](database/01_estructura.sql): crea la tabla USUARIOS y sus restricciones.
+- [Consultas de verificación](database/03_verificacion.sql): permite revisar los datos y la estructura sin consultar hashes de contraseñas.
 
-Las exclusiones cubren compilados, cachés, variables de entorno, Wallet y certificados. Revisar siempre `git status` antes de agregar archivos.
-
-- [Diseño y límites del sistema](docs/diseno.md).
-- [Contrato HTTP de identidad](docs/contrato-identidad.md).
-- [Plan del servicio](docs/plan-implementacion.md).
-- [Progreso de ejecución](docs/progreso.md).
-- [Resultados verificados](docs/verificacion.md).
-
-## Preparación para Oracle y entrega
-
-La colección y entorno propios están en [postman/](postman/README.md). Las credenciales del administrador se completan solo localmente; los tokens usan variables de ejecución. Importar y ejecutar la colección completa en Collection Runner. La revisión de JSON/JavaScript y sus flujos HTTP locales ya se realizó; las aserciones de Postman real y Oracle siguen pendientes.
-
-- [Conexión, esquema y pasos de persistencia Oracle](docs/oracle-y-entrega.md).
-- [Consultas SQL de verificación sin secretos](database/03_verificacion.sql).
-- [Matriz de evidencia y pendientes](docs/matriz-cumplimiento.md).
-- [Guion conjunto de video de 8–9 minutos](docs/guion-video.md).
-
-Los esquemas y tablas Oracle no se modificaron durante esta preparación. No se han publicado remotos, generado una entrega final ni grabado/subido el video. El alcance sigue siendo exclusivamente backend en dos repositorios separados.
+El repositorio excluye compilados, cachés, variables de entorno, credenciales, Wallet y certificados. Mantener estos archivos fuera del control de versiones.
